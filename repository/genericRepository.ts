@@ -60,10 +60,9 @@ export class GenericRepository<T extends Document> {
 
   async search(search: string, fields: string[]): Promise<T[]> {
     try {
-      // Create the dynamic search query based on the fields
       const searchQuery = {
         $or: fields.map((field) => ({
-          [field]: new RegExp(search, 'i'), // Create case-insensitive search for each field
+          [field]: new RegExp(search, 'i'), 
         })),
       };
   
