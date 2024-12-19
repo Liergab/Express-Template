@@ -61,9 +61,10 @@ export class UserService {
   }
 
   // Search users with specific criteria
-  async searchUsers(criteria: Record<string, any>): Promise<IUser[]> {
+  async searchUsers(search: string): Promise<IUser[]> {
     try {
-      return await this.userRepository.search(criteria); 
+      const fields = ['name', 'email']; // Fields to search in the User model
+      return await this.userRepository.search(search, fields);
     } catch (error) {
       console.error(error);
       throw new Error('Failed to search users');

@@ -102,9 +102,11 @@ export class UserController {
 
   async searchUsers(req: Request, res: Response): Promise<void> {
     try {
-      const criteria = req.body; 
-      const users = await this.userService.searchUsers(criteria); 
-      res.status(200).json(users); 
+      const search = req.query.search as string;
+      
+      const users = await this.userService.searchUsers(search);
+  
+      res.status(200).json({ data: users });
     } catch (error) {
       res.status(500).json({ message: 'Failed to search users' });
     }

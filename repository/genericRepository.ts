@@ -58,13 +58,26 @@ export class GenericRepository<T extends Document> {
     }
   }
 
-  async search(criteria: Record<string, any>): Promise<T[]> {
+  async search(search: string, fields: string[]): Promise<T[]> {
     try {
-      return await this.collection.find(criteria);
+      // Create the dynamic search query based on the fields
+      const searchQuery = {
+        $or: fields.map((field) => ({
+          [field]: new RegExp(search, 'i'), // Create case-insensitive search for each field
+        })),
+      };
+  
+      // Ensure the search query is of type FilterQuery<T> (for better type safety)
+      const filterQuery: Record<string, any> = searchQuery;
+  
+      // Perform the search query with lean() to get plain objects
+      const result = await this.collection.find(filterQuery).lean().exec();
+  
+      // Return the result, which is now a plain object array of type T[]
+      return result as T[]; // Type assertion to T[]
     } catch (error) {
       console.error(error);
       throw error;
     }
   }
-
 }
