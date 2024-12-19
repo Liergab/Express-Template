@@ -1,6 +1,7 @@
 import { hashPassword } from '../config/bcrypt';
 import { UserRepository } from '../repository/userRepository';
 import { IUser } from '../types/index';
+import generateToken from '../util/generateToken';
 
 export class UserService {
   private userRepository: UserRepository;
@@ -10,14 +11,15 @@ export class UserService {
   }
 
   // Create a new user
-  async createUser(userData: Partial<IUser>): Promise<IUser> {
+  async createUser(userData: Partial<IUser>): Promise<{token:string, user:IUser}> {
       const userExists = await this.userRepository.getEmail(userData.email!)
       if(userExists) {
         throw new Error('User already exists')
       }
       userData.password =  await hashPassword(userData.password!);
-      const user =  await this.userRepository.add(userData); 
-      return user
+      const newUser =  await this.userRepository.add(userData); 
+      const token = await generateToken(newUser._id)
+      return {user:newUser, token}
   }
 
   // Get a user by ID

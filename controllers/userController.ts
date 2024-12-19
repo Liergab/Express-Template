@@ -13,8 +13,17 @@ export class UserController {
   async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userData = req.body; 
-      const user = await this.userService.createUser(userData); 
-      res.status(201).json(user); 
+      const {user,token }= await this.userService.createUser(userData); 
+
+      res.cookie('auth-token',token,{
+        httpOnly:true,
+        secure: process.env.NODE_ENV !== 'development', 
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000, 
+        path: '/',
+      })
+      
+      res.status(201).json({user, token}); 
     } catch (error:any) {
       if(error?.message === 'User already exists') {
         res.status(409)
@@ -103,7 +112,7 @@ export class UserController {
   async searchUsers(req: Request, res: Response): Promise<void> {
     try {
       const search = req.query.search as string;
-      
+
       const users = await this.userService.searchUsers(search);
   
       res.status(200).json({ data: users });
