@@ -16,7 +16,8 @@ export class UserService {
         throw new Error('User already exists')
       }
       userData.password =  await hashPassword(userData.password!);
-      return await this.userRepository.add(userData); 
+      const user =  await this.userRepository.add(userData); 
+      return user
   }
 
   // Get a user by ID
@@ -30,9 +31,9 @@ export class UserService {
   }
 
   // Get all users
-  async getAllUsers(): Promise<IUser[]> {
+  async getAllUsers(skip: number, limit: number): Promise<IUser[]> {
     try {
-      return await this.userRepository.docs(); 
+      return await this.userRepository.docs(skip, limit); 
     } catch (error) {
       console.error(error);
       throw new Error('Failed to retrieve users');

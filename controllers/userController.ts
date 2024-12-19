@@ -12,9 +12,9 @@ export class UserController {
   // Create a user
   async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userData = req.body; // Get user data from the request body
-      const user = await this.userService.createUser(userData); // Call createUser service method
-      res.status(201).json(user); // Send the created user as the response
+      const userData = req.body; 
+      const user = await this.userService.createUser(userData); 
+      res.status(201).json(user); 
     } catch (error:any) {
       if(error?.message === 'User already exists') {
         res.status(409)
@@ -49,15 +49,27 @@ export class UserController {
   // Get all users
   async getAllUsers(req: Request, res: Response): Promise<void> {
     try {
-      const users = await this.userService.getAllUsers();
-      res.status(200).json({data:users}); 
+      const page = parseInt(req.query.page as string) || 1;  
+      const limit = parseInt(req.query.limit as string) || 10;  
+      const skip = (page - 1) * limit;
+      const users = await this.userService.getAllUsers(skip, limit);
+
+   
+      const hasNextPage = users.length === limit;
+
+      res.status(200).json({
+        data: users,
+        page: page,
+        limit: limit,
+        nextPage: hasNextPage ? page + 1 : null,
+      });
     } catch (error) {
       res.status(500).json({ message: 'Failed to retrieve users' });
     }
   }
 
   // Update a user by ID
-  async updateUser(req: Request, res: Response): Promise<void> {
+  async updateUser(req: Request, res: Response,next: NextFunction): Promise<void> {
     try {
       const userId = req.params.id;
       const userData = req.body; 
@@ -65,10 +77,11 @@ export class UserController {
       if (updatedUser) {
         res.status(200).json(updatedUser); 
       } else {
-        res.status(404).json({ message: 'User not found' });
+        res.status(404)
+        throw new Error('User not found');
       }
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to update user' });
+    } catch (error:any) {
+      next(error)
     }
   }
 

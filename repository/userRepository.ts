@@ -6,4 +6,9 @@ export class UserRepository extends GenericRepository<IUser> {
   constructor() {
     super('User', User.schema); 
   }
+
+  async getEmail(email:string):Promise<IUser | null>{
+    return await this.collection.findOne({email}).exec()
+  }
+
 }

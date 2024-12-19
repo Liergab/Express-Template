@@ -2,7 +2,7 @@ import mongoose, { Model, Document, Schema } from 'mongoose';
 import { ObjectId } from 'mongodb';
 
 export class GenericRepository<T extends Document> {
-  private collection: Model<T>;
+  protected collection: Model<T>;
 
   constructor(collectionName: string, schema: Schema) {
     this.collection = mongoose.model<T>(collectionName, schema);
@@ -17,19 +17,14 @@ export class GenericRepository<T extends Document> {
     }
   }
 
-  async docs(): Promise<T[]> {
+  async docs(skip: number, limit: number): Promise<T[]> {
     try {
-      return await this.collection.find();
+      return await this.collection.find().skip(skip).limit(limit).exec();
     } catch (error) {
       console.error(error);
       throw error;
     }
   }
-
-  async getEmail(email:string):Promise<T | null>{
-    return await this.collection.findOne({email}).exec()
-}
-
 
   async add(options: Partial<T>): Promise<T> {
     try {

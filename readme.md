@@ -90,5 +90,41 @@ The project is designed to provide a simple RESTful API. Below are the available
     "email": "johndoe@example.com"
   }
 
+### **`PUT /users/:id`** - Update user by ID
+- Body:
+  ```json
+  {
+    "name": "John Doe",
+  }
+
+### **`DELETE /users/:id`** - Delete user by ID
+- Returns status 200.
+
+## 🔧 Configuration
+Make sure to configure the following environment variables in the .env file:
+- `PORT`: The port on which the server will run (default: 4400).
+- `MONGODB_URI`: MongoDB connection string.
+**Example .env file:**
+- `PORT=4400`
+- `MONGODB_URI=mongodb://localhost:27017/mydatabase`
+
+### ⚡ Features
+
+- 🚀 Fast and Scalable: Built on Express.js and TypeScript for high performance and maintainability.
+- 🔒 Secure: Built-in middleware for validation and authentication.
+- 🛠️ Modular: Structured in a modular way with clear separation of concerns (routes, controllers, services, repositories, etc.).
 
 
+### Summary of Key Directories:
+
+- **index.ts:** Server initialization and routing setup.
+- **utils/:** Helper functions like error handling, - - - config validation, etc.
+-**routes/:** All routes for the API.
+- **controllers/:** Handles HTTP requests and responses, interacting with services.
+- **services/:** Business logic, implementing core application functionality.
+- **repository/:** Database interaction, queries, and data access logic.
+- **models/:** Defines MongoDB schemas and data structure.
+- **middleware/:** Custom middleware for validation, authentication, etc.
+- **config/:** Configuration files for environment variables, server settings, etc.
+- **views/:** Optional directory for HTML templates (if applicable).
+ 
