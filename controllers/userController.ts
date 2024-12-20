@@ -32,6 +32,23 @@ export class UserController {
     }
   }
 
+  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userData = req.body; 
+      const {user,token }= await this.userService.login(userData); 
+      res.cookie('auth-token',token,{
+        httpOnly:true,
+        secure: process.env.NODE_ENV !== 'development', 
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000, 
+        path: '/',
+      })
+      res.status(200).json({user, token}); 
+    } catch (error:any) {
+      next(error)
+    }
+  }
+
   // Get a user by ID
   async getUserById(req: Request, res: Response, next: NextFunction): Promise<void> {
 

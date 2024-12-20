@@ -1,4 +1,4 @@
-import { hashPassword } from '../config/bcrypt';
+import { comparePassword, hashPassword } from '../config/bcrypt';
 import { UserRepository } from '../repository/userRepository';
 import { IUser } from '../types/index';
 import generateToken from '../util/generateToken';
@@ -19,8 +19,24 @@ export class UserService {
       userData.password =  await hashPassword(userData.password!);
       const newUser =  await this.userRepository.add(userData); 
       const token = await generateToken(newUser._id)
-      return {user:newUser, token}
+      const{password:_, ...userWithoutPassword} = newUser.toObject()
+      return {user:userWithoutPassword, token}
   }
+
+  async login(userData: Partial<IUser>): Promise<{token:string, user:IUser}> {
+      const userExists = await this.userRepository.getEmail(userData.email!)
+      if(!userExists) {
+        throw new Error('User does not exist')
+      }
+      const isValidPassword = await comparePassword(userData.password!, userExists.password!)
+      if(!isValidPassword) {
+        throw new Error('Invalid Password')
+      }
+      const token = await generateToken(userExists._id)
+      const{password:_, ...userWithoutPassword} = userExists.toObject()
+      return {user:userWithoutPassword, token}
+      
+   }
 
   // Get a user by ID
   async getUserById(id: string): Promise<IUser | null> {
@@ -35,7 +51,9 @@ export class UserService {
   // Get all users
   async getAllUsers(skip: number, limit: number): Promise<IUser[]> {
     try {
-      return await this.userRepository.docs(skip, limit); 
+       const users = await this.userRepository.docs(skip, limit); 
+      const {password:_, ...userWithoutPassword} = users[0].toObject()
+       return userWithoutPassword
     } catch (error) {
       console.error(error);
       throw new Error('Failed to retrieve users');
