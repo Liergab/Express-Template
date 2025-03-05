@@ -1,5 +1,16 @@
-import mongoose, { Model, Document, Schema } from 'mongoose';
-import { ObjectId } from 'mongodb';
+import mongoose, { Model, Document, Schema } from "mongoose";
+
+interface DbParams {
+  query?: any;
+  options?: {
+    populateArray?: any[];
+    select?: string;
+    lean?: boolean;
+    sort?: any;
+    limit?: number;
+    skip?: number;
+  };
+}
 
 export class GenericRepository<T extends Document> {
   protected collection: Model<T>;
@@ -8,18 +19,36 @@ export class GenericRepository<T extends Document> {
     this.collection = mongoose.model<T>(collectionName, schema);
   }
 
-  async doc(id: string): Promise<T | null> {
+  async docs(dbParams: DbParams): Promise<T[]> {
     try {
-      return await this.collection.findById(id);
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  }
+      let query = this.collection.find(dbParams.query);
 
-  async docs(skip: number, limit: number): Promise<T[]> {
-    try {
-      return await this.collection.find().skip(skip).limit(limit).exec();
+      (dbParams.options?.populateArray || []).forEach(
+        (populate: string | { path: string; select: string }) => {
+          if (typeof populate === "string") {
+            query.populate(populate);
+          } else {
+            query.populate(populate.path, populate.select);
+          }
+        }
+      );
+
+      const options = {
+        sort: dbParams.options?.sort || {},
+        limit: dbParams.options?.limit || 10,
+        select: dbParams.options?.select || "_id",
+        lean: dbParams.options?.lean || true,
+        skip: dbParams.options?.skip || 0,
+      };
+
+      query = query
+        .sort(options.sort)
+        .limit(options.limit)
+        .select(options.select)
+        .lean(options.lean)
+        .skip(options.skip) as any;
+
+      return await query.exec();
     } catch (error) {
       console.error(error);
       throw error;
@@ -41,7 +70,7 @@ export class GenericRepository<T extends Document> {
       return await this.collection.findByIdAndUpdate(
         _id,
         { $set: options },
-        { new: true } 
+        { new: true }
       );
     } catch (error) {
       console.error(error);
@@ -62,18 +91,47 @@ export class GenericRepository<T extends Document> {
     try {
       const searchQuery = {
         $or: fields.map((field) => ({
-          [field]: new RegExp(search, 'i'), 
+          [field]: new RegExp(search, "i"),
         })),
       };
-  
-      // Ensure the search query is of type FilterQuery<T> (for better type safety)
+
       const filterQuery: Record<string, any> = searchQuery;
-  
-      // Perform the search query with lean() to get plain objects
+
       const result = await this.collection.find(filterQuery).lean().exec();
-  
-      // Return the result, which is now a plain object array of type T[]
-      return result as T[]; // Type assertion to T[]
+
+      return result as T[]; 
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async doc(id: string, dbParams: DbParams = {}): Promise<T | null> {
+    let query = this.collection.findById(id);
+
+    (dbParams.options?.populateArray || []).forEach(
+      (populate: string | { path: string; select: string }) => {
+        if (typeof populate === "string") {
+          query.populate(populate);
+        } else {
+          query.populate(populate.path, populate.select);
+        }
+      }
+    );
+
+    const options = {
+      select: dbParams.options?.select || "_id",
+      lean: dbParams.options?.lean || true,
+    };
+
+    query = query.select(options.select).lean(options.lean) as any;
+
+    return query.exec();
+  }
+
+  async count(query: Record<string, any> = {}): Promise<number> {
+    try {
+      return await this.collection.countDocuments(query);
     } catch (error) {
       console.error(error);
       throw error;
