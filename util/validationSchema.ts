@@ -6,53 +6,22 @@ export const ValidationSchemas = {
   }),
 
   getQueryParams: z.object({
-    populateArray: z
-      .array(
-        z.union([
-          z.string(),
-          z.object({
-            path: z.string(),
-            select: z.string(),
-          }),
-        ])
-      )
-      .optional(),
     select: z.union([z.string(), z.array(z.string())]).optional(),
-    lean: z.boolean().optional(),
   }),
 
   getQueriesParams: z.object({
-    query: z.record(z.any()).optional(),
-    queryArray: z.any().optional(),
-    queryArrayType: z
-      .union([z.string(), z.array(z.string())]) // Allow both string and array of strings
-      .optional(),
-    populateArray: z
-      .array(
-        z.union([
-          z.string(),
-          z.object({
-            path: z.string(),
-            select: z.string(),
-          }),
-        ])
-      )
-      .optional(),
+    filter: z.string().optional(), // Simple filters: "field:value,field2:value2" or "nested.field:value"
+    include: z.record(z.any()).optional(), // Include relations
+    select: z.union([z.string(), z.array(z.string())]).optional(),
     sort: z.string().optional(),
-    limit: z
-      .union([z.string(), z.number()])
-      .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val))
-      .optional(),
     page: z
       .union([z.string(), z.number()])
       .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val))
       .optional(),
-    pageSize: z
+    limit: z
       .union([z.string(), z.number()])
       .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val))
       .optional(),
-    select: z.union([z.string(), z.array(z.string())]).optional(),
-    lean: z.boolean().optional(),
   }),
 };
 

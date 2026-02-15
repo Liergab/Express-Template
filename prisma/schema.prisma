@@ -1,0 +1,38 @@
+// Prisma schema for MongoDB
+// Documentation: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                        String
+  email                       String    @unique
+  password                    String
+  address                     Address?
+  lastLogin                   DateTime  @default(now())
+  isVerified                  Boolean   @default(false)
+  resetPasswordToken          String?
+  resetPasswordExpiresAt      DateTime?
+  verificationToken           String?
+  verificationTokenExpiresAt  DateTime?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  @@map("users")
+}
+
+type Address {
+  street       String?
+  barangay     String?
+  city         String?
+  municipality String?
+  province     String?
+  postalCode   String?
+}

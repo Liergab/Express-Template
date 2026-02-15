@@ -4,24 +4,63 @@ import { IUser } from "../types/index";
 import generateToken from "../util/generateToken";
 
 class UserService {
+  // Parse filter string format: "field:value,nested.field:value2"
+  private parseFilterString(filterStr: string): any {
+    const filters: any = {};
+    const pairs = filterStr.split(',').map(p => p.trim()).filter(Boolean);
+
+    for (const pair of pairs) {
+      const colonIndex = pair.indexOf(':');
+      if (colonIndex === -1) continue;
+
+      const key = pair.substring(0, colonIndex).trim();
+      const value = pair.substring(colonIndex + 1).trim();
+
+      if (!key || !value) continue;
+
+      // Type conversion
+      let parsedValue: any = value;
+      if (value === 'true') parsedValue = true;
+      else if (value === 'false') parsedValue = false;
+      else if (!isNaN(Number(value)) && value !== '') parsedValue = Number(value);
+
+      // Handle nested fields (e.g., "address.city:Manila")
+      const keys = key.split('.');
+      if (keys.length === 1) {
+        // Simple field
+        filters[keys[0]] = parsedValue;
+      } else {
+        // Nested field
+        let current = filters;
+        for (let i = 0; i < keys.length - 1; i++) {
+          if (!current[keys[i]]) current[keys[i]] = {};
+          current = current[keys[i]];
+        }
+        current[keys[keys.length - 1]] = parsedValue;
+      }
+    }
+
+    return Object.keys(filters).length > 0 ? filters : undefined;
+  }
+
   // Create a new user
   async createUser(
     userData: Partial<IUser>
-  ): Promise<{ token: string; user: IUser }> {
+  ): Promise<{ token: string; user: Omit<IUser, 'password'> }> {
     const userExists = await UserRepository.getEmail(userData.email!);
     if (userExists) {
       throw new Error("User already exists");
     }
     userData.password = await hashPassword(userData.password!);
     const newUser = await UserRepository.add(userData);
-    const token = await generateToken(newUser._id);
-    const { password: _, ...userWithoutPassword } = newUser.toObject();
+    const token = await generateToken(newUser.id); // Prisma uses 'id' not '_id'
+    const { password: _, ...userWithoutPassword } = newUser; // Prisma returns plain objects
     return { user: userWithoutPassword, token };
   }
 
   async login(
     userData: Partial<IUser>
-  ): Promise<{ token: string; user: IUser }> {
+  ): Promise<{ token: string; user: Omit<IUser, 'password'> }> {
     const userExists = await UserRepository.getEmail(userData.email!);
     if (!userExists) {
       throw new Error("User does not exist");
@@ -33,8 +72,8 @@ class UserService {
     if (!isValidPassword) {
       throw new Error("Invalid Password");
     }
-    const token = await generateToken(userExists._id);
-    const { password: _, ...userWithoutPassword } = userExists.toObject();
+    const token = await generateToken(userExists.id); // Prisma uses 'id' not '_id'
+    const { password: _, ...userWithoutPassword } = userExists; // Prisma returns plain objects
     return { user: userWithoutPassword, token };
   }
 
@@ -53,8 +92,14 @@ class UserService {
     }
 
     try {
-      const dbParams: any = { query: {}, options: {} };
+      const dbParams: any = { where: {} };
 
+      // Handle include for relations (e.g., include: { posts: true })
+      if (params.include && typeof params.include === 'object') {
+        dbParams.include = params.include;
+      }
+
+      // Handle query array (Prisma uses 'in' instead of '$in')
       if (
         params.queryArray &&
         params.queryArray.length > 0 &&
@@ -68,58 +113,49 @@ class UserService {
           ? params.queryArrayType
           : [params.queryArrayType];
 
-        const queryConditions = queryArrayType.map((type: string | number) => {
+        queryArrayType.forEach((type: string | number) => {
           const trimmedType = String(type).trim();
-          return { [trimmedType]: { $in: queryArray } };
+          dbParams.where[trimmedType] = { in: queryArray };
         });
+      }
 
-        interface QueryCondition {
-          [key: string]: { $in: any[] };
+      // Handle simple filters (e.g., "isVerified:true,name:John" or "address.city:Manila")
+      if (params.filter && typeof params.filter === 'string') {
+        const parsedFilter = this.parseFilterString(params.filter);
+        if (parsedFilter) {
+          dbParams.where = { ...dbParams.where, ...parsedFilter };
         }
-
-        queryConditions.forEach((condition: QueryCondition) => {
-          dbParams.query = { ...dbParams.query, ...condition };
-        });
       }
 
-      if (params.populateArray) {
-        dbParams.options.populateArray = params.populateArray.map(
-          (item: any) => {
-            if (typeof item === "string") {
-              const [path, select] = item.split(":");
-              return select
-                ? { path, select: select.split(",").join(" ") }
-                : { path };
-            }
-            return item;
-          }
-        );
-      }
-
+      // Handle sorting
       if (params.sort) {
-        dbParams.options.sort = params.sort;
-      }
-      if (params.limit) {
-        dbParams.options.limit = params.limit;
-      }
-      if (params.select) {
-        if (!Array.isArray(params.select)) {
-          params.select = [params.select];
-        }
-        dbParams.options.select = params.select.join(" ");
-      }
-      if (params.lean !== undefined) {
-        dbParams.options.lean = params.lean;
+        dbParams.orderBy = params.sort;
       }
 
+      // Handle field selection (Prisma uses 'select')
+      // Note: select and include cannot be used together in Prisma
+      if (params.select && !dbParams.include) {
+        const selectFields = Array.isArray(params.select)
+          ? params.select.filter((f: string) => f && f.trim())
+          : [params.select].filter((f: string) => f && f.trim());
+
+        if (selectFields.length > 0) {
+          dbParams.select = {};
+          selectFields.forEach((field: string) => {
+            dbParams.select[field] = true;
+          });
+        }
+      }
+
+      // Pagination
       const page = params.page || 1;
       const limit = params.limit || 10;
-      dbParams.options.skip = (page - 1) * limit;
-      dbParams.options.limit = limit;
+      dbParams.skip = (page - 1) * limit;
+      dbParams.take = limit;
 
       const [users, totalItems] = await Promise.all([
         UserRepository.docs(dbParams),
-        UserRepository.count(dbParams.query),
+        UserRepository.count(dbParams.where),
       ]);
 
       const totalPages = Math.ceil(totalItems / limit);
@@ -182,35 +218,20 @@ class UserService {
     }
 
     try {
-      const dbParams: any = { query: {}, options: {} };
-      if (params.populateArray) {
-        dbParams.options.populateArray = params.populateArray.map(
-          (item: any) => {
-            if (typeof item === "string") {
-              const [path, select] = item.split(":");
-              return select
-                ? { path, select: select.split(",").join(" ") }
-                : { path };
-            }
-            return item;
-          }
-        );
-      }
+      const dbParams: any = {};
 
-      if (params.queryArray) {
-        const queryArrayObj: { [key: string]: any } = {};
-        queryArrayObj[params.queryArrayType] = params.queryArray;
-        dbParams.query = { ...dbParams.query, ...queryArrayObj };
-      }
-
+      // Handle field selection (Prisma uses 'select')
       if (params.select) {
-        if (!Array.isArray(params.select)) {
-          params.select = [params.select];
+        const selectFields = Array.isArray(params.select)
+          ? params.select.filter((f: string) => f && f.trim())
+          : [params.select].filter((f: string) => f && f.trim());
+
+        if (selectFields.length > 0) {
+          dbParams.select = {};
+          selectFields.forEach((field: string) => {
+            dbParams.select[field] = true;
+          });
         }
-        dbParams.options.select = params.select.join(" ");
-      }
-      if (params.lean !== undefined) {
-        dbParams.options.lean = params.lean;
       }
 
       return await UserRepository.doc(id, dbParams);

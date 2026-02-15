@@ -1,16 +1,14 @@
 import { IUser } from '../types';
-import User from '../models/USER_MODEL';
-import { GenericRepository } from './genericRepository'; 
+import { GenericRepository } from './genericRepository';
 
 class UserRepository extends GenericRepository<IUser> {
   constructor() {
-    super('User', User.schema); 
+    super('user'); // Prisma model name (lowercase)
   }
 
-  async getEmail(email:string):Promise<IUser | null>{
-    return await this.collection.findOne({email}).exec()
+  async getEmail(email: string): Promise<IUser | null> {
+    return await this.findOne({ email });
   }
-
 }
 
 export default new UserRepository();

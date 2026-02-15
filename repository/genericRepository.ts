@@ -1,139 +1,179 @@
-import mongoose, { Model, Document, Schema } from "mongoose";
+import { prisma } from '../config/db';
+import logger from '../config/logger';
 
-interface DbParams {
-  query?: any;
-  options?: {
-    populateArray?: any[];
-    select?: string;
-    lean?: boolean;
-    sort?: any;
-    limit?: number;
-    skip?: number;
-  };
+// Prisma query parameters interface
+export interface PrismaDbParams {
+  where?: any;
+  select?: any;
+  include?: any;
+  orderBy?: any;
+  skip?: number;
+  take?: number;
 }
 
-export class GenericRepository<T extends Document> {
-  protected collection: Model<T>;
+/**
+ * Generic Repository for Prisma
+ * Provides common CRUD operations for any Prisma model
+ */
+export class GenericRepository<T> {
+  protected modelName: string;
 
-  constructor(collectionName: string, schema: Schema) {
-    this.collection = mongoose.model<T>(collectionName, schema);
+  constructor(modelName: string) {
+    this.modelName = modelName;
   }
 
-  async docs(dbParams: DbParams): Promise<T[]> {
+  /**
+   * Get the Prisma delegate for this model
+   */
+  protected getDelegate(): any {
+    return (prisma as any)[this.modelName];
+  }
+
+  /**
+   * Find multiple documents
+   */
+  async docs(dbParams: PrismaDbParams = {}): Promise<T[]> {
     try {
-      let query = this.collection.find(dbParams.query);
+      const delegate = this.getDelegate();
 
-      (dbParams.options?.populateArray || []).forEach(
-        (populate: string | { path: string; select: string }) => {
-          if (typeof populate === "string") {
-            query.populate(populate);
-          } else {
-            query.populate(populate.path, populate.select);
-          }
-        }
-      );
+      const query: any = {};
 
-      const options = {
-        sort: dbParams.options?.sort || {},
-        limit: dbParams.options?.limit || 10,
-        select: dbParams.options?.select || "_id",
-        lean: dbParams.options?.lean || true,
-        skip: dbParams.options?.skip || 0,
+      if (dbParams.where) query.where = dbParams.where;
+      if (dbParams.select) query.select = dbParams.select;
+      if (dbParams.include) query.include = dbParams.include;
+      if (dbParams.orderBy) query.orderBy = dbParams.orderBy;
+      if (dbParams.skip !== undefined) query.skip = dbParams.skip;
+      if (dbParams.take !== undefined) query.take = dbParams.take;
+
+      const result = await delegate.findMany(query);
+      return result as T[];
+    } catch (error) {
+      logger.error(`Error in docs for ${this.modelName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new document
+   */
+  async add(data: Partial<T>): Promise<T> {
+    try {
+      const delegate = this.getDelegate();
+      const result = await delegate.create({ data });
+      return result as T;
+    } catch (error) {
+      logger.error(`Error in add for ${this.modelName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a document by ID
+   */
+  async update(id: string, data: Partial<T>): Promise<T | null> {
+    try {
+      const delegate = this.getDelegate();
+      const result = await delegate.update({
+        where: { id },
+        data,
+      });
+      return result as T;
+    } catch (error) {
+      logger.error(`Error in update for ${this.modelName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a document by ID
+   */
+  async delete(id: string): Promise<T | null> {
+    try {
+      const delegate = this.getDelegate();
+      const result = await delegate.delete({
+        where: { id },
+      });
+      return result as T;
+    } catch (error) {
+      logger.error(`Error in delete for ${this.modelName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search documents by multiple fields
+   */
+  async search(searchTerm: string, fields: string[]): Promise<T[]> {
+    try {
+      const delegate = this.getDelegate();
+
+      // Create OR condition for each field
+      const orConditions = fields.map((field) => ({
+        [field]: {
+          contains: searchTerm,
+          mode: 'insensitive', // Case-insensitive search
+        },
+      }));
+
+      const result = await delegate.findMany({
+        where: {
+          OR: orConditions,
+        },
+      });
+
+      return result as T[];
+    } catch (error) {
+      logger.error(`Error in search for ${this.modelName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find a single document by ID
+   */
+  async doc(id: string, dbParams: PrismaDbParams = {}): Promise<T | null> {
+    try {
+      const delegate = this.getDelegate();
+
+      const query: any = {
+        where: { id },
       };
 
-      query = query
-        .sort(options.sort)
-        .limit(options.limit)
-        .select(options.select)
-        .lean(options.lean)
-        .skip(options.skip) as any;
+      if (dbParams.select) query.select = dbParams.select;
+      if (dbParams.include) query.include = dbParams.include;
 
-      return await query.exec();
+      const result = await delegate.findUnique(query);
+      return result as T | null;
     } catch (error) {
-      console.error(error);
+      logger.error(`Error in doc for ${this.modelName}:`, error);
       throw error;
     }
   }
 
-  async add(options: Partial<T>): Promise<T> {
+  /**
+   * Count documents
+   */
+  async count(where: any = {}): Promise<number> {
     try {
-      const modelObj = new this.collection(options);
-      return await modelObj.save();
+      const delegate = this.getDelegate();
+      const result = await delegate.count({ where });
+      return result;
     } catch (error) {
-      console.error(error);
+      logger.error(`Error in count for ${this.modelName}:`, error);
       throw error;
     }
   }
 
-  async update(_id: string, options: Partial<T>): Promise<T | null> {
+  /**
+   * Find a single document by condition
+   */
+  async findOne(where: any): Promise<T | null> {
     try {
-      return await this.collection.findByIdAndUpdate(
-        _id,
-        { $set: options },
-        { new: true }
-      );
+      const delegate = this.getDelegate();
+      const result = await delegate.findFirst({ where });
+      return result as T | null;
     } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  }
-
-  async delete(_id: string): Promise<T | null> {
-    try {
-      return await this.collection.findByIdAndDelete(_id);
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  }
-
-  async search(search: string, fields: string[]): Promise<T[]> {
-    try {
-      const searchQuery = {
-        $or: fields.map((field) => ({
-          [field]: new RegExp(search, "i"),
-        })),
-      };
-
-      const filterQuery: Record<string, any> = searchQuery;
-
-      const result = await this.collection.find(filterQuery).lean().exec();
-
-      return result as T[]; 
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  }
-
-  async doc(id: string, dbParams: DbParams = {}): Promise<T | null> {
-    let query = this.collection.findById(id);
-
-    (dbParams.options?.populateArray || []).forEach(
-      (populate: string | { path: string; select: string }) => {
-        if (typeof populate === "string") {
-          query.populate(populate);
-        } else {
-          query.populate(populate.path, populate.select);
-        }
-      }
-    );
-
-    const options = {
-      select: dbParams.options?.select || "_id",
-      lean: dbParams.options?.lean || true,
-    };
-
-    query = query.select(options.select).lean(options.lean) as any;
-
-    return query.exec();
-  }
-
-  async count(query: Record<string, any> = {}): Promise<number> {
-    try {
-      return await this.collection.countDocuments(query);
-    } catch (error) {
-      console.error(error);
+      logger.error(`Error in findOne for ${this.modelName}:`, error);
       throw error;
     }
   }

@@ -1,8 +1,12 @@
 import { NextFunction, Request, Response } from "express";
 import UserService from "../services/userServices";
-import mongoose from "mongoose";
 import { ValidationSchemas } from "../util/validationSchema";
 import { handleZodError } from "../middleware/zodErrorHandler";
+
+// MongoDB ObjectId validation helper (24-character hex string)
+const isValidObjectId = (id: string): boolean => {
+  return /^[a-fA-F0-9]{24}$/.test(id);
+};
 
 // Create a user
 export const createUser = async (
@@ -60,7 +64,7 @@ export const getUserById = async (
 ): Promise<void> => {
   try {
     const userId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    if (!isValidObjectId(userId)) {
       res.status(400);
       throw new Error("Invalid user ID format");
     }
@@ -82,43 +86,29 @@ export const getAllUsers = async (
   res: Response
 ): Promise<void> => {
   try {
+    // Parse JSON parameters (include, sort)
+    const parseJsonParam = (param: any) => {
+      if (!param) return undefined;
+      if (typeof param === 'string') {
+        try {
+          return JSON.parse(param);
+        } catch {
+          return undefined;
+        }
+      }
+      return param;
+    };
+
     const params = ValidationSchemas.getQueriesParams.parse({
-      query: req.query.query || {},
-      queryArray: req.query.queryArray
-        ? Array.isArray(req.query.queryArray)
-          ? req.query.queryArray
-          : String(req.query.queryArray)
-              .split(",")
-              .map((item) => item.trim())
-        : [],
-      queryArrayType: req.query.queryArrayType
-        ? Array.isArray(req.query.queryArrayType)
-          ? req.query.queryArrayType.map(String)
-          : String(req.query.queryArrayType).split(",")
-        : [],
-      populateArray: req.query.populateArray
-        ? req.query.populateArray
-            .toString()
-            .split(" ")
-            .map((path, index) => ({
-              path,
-              select:
-                req.query.populateSelect
-                  ?.toString()
-                  .split(",")
-                  [index]?.trim() || "",
-            }))
-        : [],
-      sort: req.query.sort,
+      filter: req.query.filter as string,
+      include: parseJsonParam(req.query.include),
+      sort: parseJsonParam(req.query.sort) || req.query.sort,
       limit: req.query.limit,
       select: Array.isArray(req.query.select)
         ? req.query.select
         : [req.query.select].filter(Boolean),
-      lean: req.query.lean,
       page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
     });
-
-    if (!params.query) params.query = {};
 
     const { users, pagination } = await UserService.getUsers(params);
 
@@ -140,23 +130,9 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = ValidationSchemas.idParam.parse({ id: req.params.id });
     const params = ValidationSchemas.getQueryParams.parse({
-      populateArray: req.query.populateArray
-        ? req.query.populateArray
-            .toString()
-            .split(" ")
-            .map((path, index) => ({
-              path,
-              select:
-                req.query.populateSelect
-                  ?.toString()
-                  .split(",")
-                  [index]?.trim() || "",
-            }))
-        : [],
       select: Array.isArray(req.query.select)
         ? req.query.select
         : [req.query.select].filter(Boolean),
-      lean: req.query.lean,
     });
 
     const user = await UserService.getUser(id, params);
