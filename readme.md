@@ -4,6 +4,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-4.x-lightgrey)](https://expressjs.com/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-7.x-green)](https://www.mongodb.com/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748)](https://www.prisma.io/)
 [![Redis](https://img.shields.io/badge/Redis-7.x-red)](https://redis.io/)
 [![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
 
@@ -49,10 +50,20 @@ A production-ready, enterprise-grade Express.js template with TypeScript, featur
 
 ### 🗄️ Data Management
 
-- ✅ **MongoDB with Mongoose** - NoSQL database
+- ✅ **MongoDB with Prisma ORM** - Type-safe data access
 - ✅ **Generic Repository Pattern** - Reusable data access
 - ✅ **Redis** - Caching and session storage
 - ✅ **Nodemailer** - Email service
+
+### 🤖 AI-Orchestrated Workflow
+
+- ✅ **Multi-Agent Orchestration** - Specialized AI role definitions in `.orchestration/`
+- ✅ **Agent Playbooks** - Task-focused guidance for API, backend, QA, security, and testing
+
+### ⚙️ Feature Scaffolding
+
+- ✅ **Feature Generator Script** - `npm run feature -- <name>` creates route/controller/service/repository/prisma files
+- ✅ **Undo Feature Script** - `npm run undo -- feature <name>` removes generated feature files and route wiring
 
 ---
 
@@ -71,7 +82,10 @@ Express-Template/
 │   ├── cacheMiddleware.ts
 │   ├── error.ts
 │   └── morganMiddleware.ts
-├── models/             # Mongoose schemas
+├── prisma/             # Prisma ORM configuration and schema modules
+│   └── schema/
+│       ├── base.prisma
+│       └── user.prisma
 ├── repository/         # Data access layer
 │   ├── genericRepository.ts
 │   └── userRepository.ts
@@ -79,6 +93,11 @@ Express-Template/
 │   ├── healthRoutes.ts
 │   └── userRoutes.ts
 ├── services/           # Business logic
+├── socket/             # Socket.IO server and event definitions
+├── scripts/            # Feature scaffolding/undo utilities
+│   ├── create-feature.js
+│   └── undo-feature.js
+├── .orchestration/     # AI multi-agent orchestration docs and roles
 ├── util/               # Utilities and helpers
 │   └── validation/     # Zod schemas
 ├── views/              # Email templates (EJS)
@@ -153,6 +172,15 @@ npm run build            # Build TypeScript to JavaScript
 npm start                # Start production server
 ```
 
+### Prisma
+
+```bash
+npm run prisma:generate  # Generate Prisma client
+npm run prisma:push      # Push schema changes to database
+npm run prisma:pull      # Pull schema from database
+npm run prisma:studio    # Open Prisma Studio
+```
+
 ### Testing
 
 ```bash
@@ -174,6 +202,14 @@ npm run format:check     # Check code formatting
 ```bash
 npm run audit            # Check for vulnerabilities
 npm run audit:fix        # Fix vulnerabilities
+```
+
+### Feature Scaffolding
+
+```bash
+npm run feature -- todo          # Scaffold a new feature module
+npm run undo -- feature todo     # Undo/remove a generated feature
+npm run undo:feature -- todo     # Alias for undo script
 ```
 
 ### PM2 Process Management
@@ -343,7 +379,7 @@ This template follows a **layered architecture** with clear separation of concer
 2. **Controllers Layer** - Request handling
 3. **Services Layer** - Business logic
 4. **Repository Layer** - Data access (Generic Repository Pattern)
-5. **Models Layer** - Database schemas
+5. **Prisma Schema Layer** - Database models and mappings
 
 ---
 
@@ -352,7 +388,7 @@ This template follows a **layered architecture** with clear separation of concer
 - **Runtime**: Node.js 20
 - **Framework**: Express.js 4
 - **Language**: TypeScript 5
-- **Database**: MongoDB with Mongoose
+- **Database**: MongoDB with Prisma ORM
 - **Caching**: Redis
 - **Authentication**: JWT + Cookies
 - **Validation**: Zod
