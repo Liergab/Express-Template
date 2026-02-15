@@ -2,47 +2,9 @@ import { comparePassword, hashPassword } from "../config/bcrypt";
 import UserRepository from "../repository/userRepository";
 import { IUser } from "../types/index";
 import generateToken from "../util/generateToken";
+import parseFilterString from "../util/parseFilterString";
 
 class UserService {
-  // Parse filter string format: "field:value,nested.field:value2"
-  private parseFilterString(filterStr: string): any {
-    const filters: any = {};
-    const pairs = filterStr.split(',').map(p => p.trim()).filter(Boolean);
-
-    for (const pair of pairs) {
-      const colonIndex = pair.indexOf(':');
-      if (colonIndex === -1) continue;
-
-      const key = pair.substring(0, colonIndex).trim();
-      const value = pair.substring(colonIndex + 1).trim();
-
-      if (!key || !value) continue;
-
-      // Type conversion
-      let parsedValue: any = value;
-      if (value === 'true') parsedValue = true;
-      else if (value === 'false') parsedValue = false;
-      else if (!isNaN(Number(value)) && value !== '') parsedValue = Number(value);
-
-      // Handle nested fields (e.g., "address.city:Manila")
-      const keys = key.split('.');
-      if (keys.length === 1) {
-        // Simple field
-        filters[keys[0]] = parsedValue;
-      } else {
-        // Nested field
-        let current = filters;
-        for (let i = 0; i < keys.length - 1; i++) {
-          if (!current[keys[i]]) current[keys[i]] = {};
-          current = current[keys[i]];
-        }
-        current[keys[keys.length - 1]] = parsedValue;
-      }
-    }
-
-    return Object.keys(filters).length > 0 ? filters : undefined;
-  }
-
   // Create a new user
   async createUser(
     userData: Partial<IUser>
@@ -121,7 +83,7 @@ class UserService {
 
       // Handle simple filters (e.g., "isVerified:true,name:John" or "address.city:Manila")
       if (params.filter && typeof params.filter === 'string') {
-        const parsedFilter = this.parseFilterString(params.filter);
+        const parsedFilter = parseFilterString(params.filter);
         if (parsedFilter) {
           dbParams.where = { ...dbParams.where, ...parsedFilter };
         }

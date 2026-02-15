@@ -562,6 +562,13 @@ async createUser(userData: CreateUserDTO): Promise<PublicUser> {
 }
 ```
 
+### 5. Helper/Utility Naming Convention
+- Keep one-off logic inside the local service/controller as a private helper.
+- Move logic to `util/` when it is reused in 2 or more places.
+- Use camelCase function names (`parseFilterString`, `isValidObjectId`).
+- Use descriptive file names that match the exported helper (`util/parseFilterString.ts`).
+- Prefer pure helpers (input -> output) with no side effects.
+
 ## Security Checklist
 
 ### In Services:
@@ -585,6 +592,7 @@ Before passing to @TEST_ENGINEER:
 - [ ] All services implemented and documented
 - [ ] All controllers handle errors properly
 - [ ] Input validation with Zod
+- [ ] Reusable helpers extracted to `util/` with clear naming
 - [ ] Password hashing implemented
 - [ ] Authentication checked where required
 - [ ] Repository methods optimized

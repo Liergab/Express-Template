@@ -13,7 +13,7 @@ export const ValidationSchemas = {
     filter: z.string().optional(), // Simple filters: "field:value,field2:value2" or "nested.field:value"
     include: z.record(z.any()).optional(), // Include relations
     select: z.union([z.string(), z.array(z.string())]).optional(),
-    sort: z.string().optional(),
+    sort: z.union([z.string(), z.record(z.any())]).optional(),
     page: z
       .union([z.string(), z.number()])
       .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val))

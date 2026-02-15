@@ -52,7 +52,7 @@ class DatabaseService {
 export const prisma = DatabaseService.getInstance();
 
 // Export connection function for backward compatibility
-const db = DatabaseService.connect;
+const db = () => DatabaseService.connect();
 export default db;
 
 // Export disconnect for graceful shutdown
