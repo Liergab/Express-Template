@@ -22,6 +22,8 @@
 - Utility file names describe one responsibility (`util/parseFilterString.ts`)
 - Avoid duplicate helper logic across services/controllers
 - Keep private helpers local unless reused in multiple modules
+- Zod schemas are centralized in `util/validation/<model>Zod.ts`
+- Controller/service DTO types come from `z.infer` on shared Zod schemas
 
 ### 3. Security and Reliability Review
 - Check authentication/authorization flows
@@ -86,6 +88,7 @@ Before approval:
 - [ ] Security-sensitive paths are covered
 - [ ] Tests validate the changed behavior
 - [ ] Naming conventions and helper placement are consistent
+- [ ] Zod placement and DTO usage follow project convention
 - [ ] Error handling and logs are reasonable
 - [ ] Documentation updated where needed
 

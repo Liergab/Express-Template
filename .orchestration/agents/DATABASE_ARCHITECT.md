@@ -32,7 +32,7 @@
 
 ### Prisma Schema Structure
 ```prisma
-// File: prisma/schema.prisma
+// File: prisma/schema/base.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -42,6 +42,10 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+```
+
+```prisma
+// File: prisma/schema/user.prisma
 
 model User {
   id                          String    @id @default(auto()) @map("_id") @db.ObjectId
@@ -83,6 +87,13 @@ model Post {
   @@map("posts")
 }
 ```
+
+### Prisma Multi-file Convention
+- Use `prisma/schema/` as the Prisma schema folder in `prisma.config.ts`.
+- Keep shared generator/datasource in `prisma/schema/base.prisma`.
+- Keep each model in its own file: `prisma/schema/<model>.prisma` (e.g., `user.prisma`, `post.prisma`).
+- Keep related embedded `type` blocks with the owning model file when possible.
+- Run `npx prisma validate` before handoff.
 
 ### Field Type Selection
 
@@ -478,7 +489,8 @@ npx prisma format
 ## Handoff Checklist
 
 Before passing to @BACKEND_DEVELOPER:
-- [ ] Schema models defined in `prisma/schema.prisma`
+- [ ] Schema models defined in `prisma/schema/*.prisma` (multi-file)
+- [ ] Shared config is in `prisma/schema/base.prisma`
 - [ ] Relationships properly configured
 - [ ] Indexes added for frequently queried fields
 - [ ] Default values set where appropriate

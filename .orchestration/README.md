@@ -77,6 +77,8 @@ graph LR
 2. **Security first** - Consult security agent for sensitive operations
 3. **Test as you build** - Invoke test engineer after implementation
 4. **Review before merge** - Always use code reviewer
+5. **Zod-first validation** - Keep schemas in `util/validation/<model>Zod.ts` and use schema-inferred DTO types in controllers/services
+6. **Prisma multi-file schema** - Keep Prisma schema in `prisma/schema/` with per-model files (e.g., `user.prisma`) plus shared `base.prisma`
 
 ## Current Tech Stack
 

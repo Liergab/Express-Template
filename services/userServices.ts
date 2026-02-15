@@ -3,25 +3,32 @@ import UserRepository from "../repository/userRepository";
 import { IUser } from "../types/index";
 import generateToken from "../util/generateToken";
 import parseFilterString from "../util/parseFilterString";
+import {
+  CreateUserDTO,
+  GetUserQueryDTO,
+  GetUsersQueryDTO,
+  LoginDTO,
+  UpdateUserDTO,
+} from "../util/validation/userZod";
 
 class UserService {
   // Create a new user
   async createUser(
-    userData: Partial<IUser>
+    userData: CreateUserDTO
   ): Promise<{ token: string; user: Omit<IUser, 'password'> }> {
     const userExists = await UserRepository.getEmail(userData.email!);
     if (userExists) {
       throw new Error("User already exists");
     }
     userData.password = await hashPassword(userData.password!);
-    const newUser = await UserRepository.add(userData);
+    const newUser = await UserRepository.add(userData as Partial<IUser>);
     const token = await generateToken(newUser.id); // Prisma uses 'id' not '_id'
     const { password: _, ...userWithoutPassword } = newUser; // Prisma returns plain objects
     return { user: userWithoutPassword, token };
   }
 
   async login(
-    userData: Partial<IUser>
+    userData: LoginDTO
   ): Promise<{ token: string; user: Omit<IUser, 'password'> }> {
     const userExists = await UserRepository.getEmail(userData.email!);
     if (!userExists) {
@@ -48,7 +55,7 @@ class UserService {
     }
   }
 
-  async getUsers(params: any): Promise<{ users: IUser[]; pagination: any }> {
+  async getUsers(params: GetUsersQueryDTO): Promise<{ users: IUser[]; pagination: any }> {
     if (!params) {
       throw new Error("Invalid parameters for getting all users");
     }
@@ -62,18 +69,18 @@ class UserService {
       }
 
       // Handle query array (Prisma uses 'in' instead of '$in')
-      if (
-        params.queryArray &&
-        params.queryArray.length > 0 &&
-        params.queryArrayType &&
-        params.queryArrayType.length > 0
-      ) {
-        const queryArray = Array.isArray(params.queryArray)
-          ? params.queryArray
-          : [params.queryArray];
-        const queryArrayType = Array.isArray(params.queryArrayType)
-          ? params.queryArrayType
-          : [params.queryArrayType];
+      const queryArray = Array.isArray(params.queryArray)
+        ? params.queryArray
+        : params.queryArray !== undefined
+          ? [params.queryArray]
+          : [];
+      const queryArrayType = Array.isArray(params.queryArrayType)
+        ? params.queryArrayType
+        : params.queryArrayType !== undefined
+          ? [params.queryArrayType]
+          : [];
+
+      if (queryArray.length > 0 && queryArrayType.length > 0) {
 
         queryArrayType.forEach((type: string | number) => {
           const trimmedType = String(type).trim();
@@ -143,10 +150,10 @@ class UserService {
   // Update user details by ID
   async updateUser(
     id: string,
-    userData: Partial<IUser>
+    userData: UpdateUserDTO
   ): Promise<IUser | null> {
     try {
-      return await UserRepository.update(id, userData);
+      return await UserRepository.update(id, userData as Partial<IUser>);
     } catch (error) {
       console.error(error);
       throw new Error("Failed to update user");
@@ -174,7 +181,7 @@ class UserService {
     }
   }
 
-  async getUser(id: string, params: any): Promise<IUser | null> {
+  async getUser(id: string, params: GetUserQueryDTO): Promise<IUser | null> {
     if (!id) {
       throw new Error("User ID is required");
     }

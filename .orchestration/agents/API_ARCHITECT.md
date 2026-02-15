@@ -103,7 +103,7 @@ DELETE /api/users/:id                - Delete user (owner only)
 
 ### 3. Define Validation Schemas
 ```typescript
-// File: util/validationSchema.ts
+// File: util/validation/userZod.ts
 export const ValidationSchemas = {
   createUser: z.object({
     name: z.string().min(2).max(100),
@@ -123,6 +123,9 @@ export const ValidationSchemas = {
     limit: z.number().positive().max(100).optional()
   })
 }
+
+export type CreateUserDTO = z.infer<typeof ValidationSchemas.createUser>;
+export type UpdateUserDTO = z.infer<typeof ValidationSchemas.updateUser>;
 ```
 
 ### 4. Plan Middleware Chain
@@ -162,7 +165,7 @@ router.get('/users',
 
 ### Create/Modify
 - `routes/*.ts` - Route definitions
-- `util/validationSchema.ts` - Zod schemas
+- `util/validation/*.ts` - Model-based Zod schemas
 - `types/index.ts` - TypeScript interfaces
 - `swagger/*.ts` - API documentation
 

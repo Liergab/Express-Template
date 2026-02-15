@@ -1,4 +1,5 @@
 import express      from 'express'
+import { createServer } from 'http'
 import env          from './util/validate'
 import db, { disconnectDB } from './config/db'
 import index        from './routes/index'
@@ -11,8 +12,10 @@ import logger       from './config/logger'
 import morganMiddleware from './middleware/morganMiddleware'
 import { errorValidation,
          NotFoundEndpoint } from './middleware/error'
+import { initSocketServer } from './socket/socketServer'
 
 const app = express()
+const httpServer = createServer(app)
 
 const PORT = env.PORT
 
@@ -45,9 +48,11 @@ app.use('/v1/api', index)
 app.use(NotFoundEndpoint)
 app.use(errorValidation)
 
+const io = initSocketServer(httpServer)
 
-const server = app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     logger.info(`Server running on port http://localhost:${PORT}`)
+    logger.info(`Socket.IO server ready on ws://localhost:${PORT}`)
     db()
 })
 
@@ -55,7 +60,9 @@ const server = app.listen(PORT, () => {
 const gracefulShutdown = (signal: string) => {
   logger.info(`${signal} received. Starting graceful shutdown...`)
 
-  server.close(() => {
+  io.close()
+
+  httpServer.close(() => {
     logger.info('HTTP server closed')
 
     // Close Prisma database connection

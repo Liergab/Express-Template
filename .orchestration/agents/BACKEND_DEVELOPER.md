@@ -545,17 +545,17 @@ class UserService {
 ### 3. Input Validation
 ```typescript
 // Always validate at controller level
+import { ValidationSchemas } from "../util/validation/userZod";
 const userData = ValidationSchemas.createUser.parse(req.body);
 ```
 
 ### 4. Type Safety
 ```typescript
-// Use TypeScript types
-interface CreateUserDTO {
-  name: string;
-  email: string;
-  password: string;
-}
+// Use schema-inferred DTO types
+import { z } from "zod";
+import { ValidationSchemas } from "../util/validation/userZod";
+
+type CreateUserDTO = z.infer<typeof ValidationSchemas.createUser>;
 
 async createUser(userData: CreateUserDTO): Promise<PublicUser> {
   // Implementation
@@ -568,6 +568,8 @@ async createUser(userData: CreateUserDTO): Promise<PublicUser> {
 - Use camelCase function names (`parseFilterString`, `isValidObjectId`).
 - Use descriptive file names that match the exported helper (`util/parseFilterString.ts`).
 - Prefer pure helpers (input -> output) with no side effects.
+- Keep Zod schemas in `util/validation/<model>Zod.ts` (not inside controllers/services).
+- Export DTO types from Zod schemas and use them in service method signatures.
 
 ## Security Checklist
 
@@ -592,6 +594,7 @@ Before passing to @TEST_ENGINEER:
 - [ ] All services implemented and documented
 - [ ] All controllers handle errors properly
 - [ ] Input validation with Zod
+- [ ] Zod schemas are in `util/validation/` and reused across layers
 - [ ] Reusable helpers extracted to `util/` with clear naming
 - [ ] Password hashing implemented
 - [ ] Authentication checked where required

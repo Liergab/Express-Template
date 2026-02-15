@@ -1,12 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import UserService from "../services/userServices";
-import { ValidationSchemas } from "../util/validationSchema";
+import { ValidationSchemas } from "../util/validation/userZod";
 import { handleZodError } from "../middleware/zodErrorHandler";
-
-// MongoDB ObjectId validation helper (24-character hex string)
-const isValidObjectId = (id: string): boolean => {
-  return /^[a-fA-F0-9]{24}$/.test(id);
-};
 
 // Create a user
 export const createUser = async (
@@ -15,7 +10,7 @@ export const createUser = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userData = req.body;
+    const userData = ValidationSchemas.createUser.parse(req.body);
     const { user, token } = await UserService.createUser(userData);
 
     res.cookie("auth-token", token, {
@@ -41,7 +36,7 @@ export const login = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userData = req.body;
+    const userData = ValidationSchemas.login.parse(req.body);
     const { user, token } = await UserService.login(userData);
     res.cookie("auth-token", token, {
       httpOnly: true,
@@ -63,11 +58,7 @@ export const getUserById = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.params.id;
-    if (!isValidObjectId(userId)) {
-      res.status(400);
-      throw new Error("Invalid user ID format");
-    }
+    const { id: userId } = ValidationSchemas.idParam.parse({ id: req.params.id });
     const user = await UserService.getUserById(userId);
     if (user) {
       res.status(200).json(user);
@@ -151,8 +142,8 @@ export const updateUser = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.params.id;
-    const userData = req.body;
+    const { id: userId } = ValidationSchemas.idParam.parse({ id: req.params.id });
+    const userData = ValidationSchemas.updateUser.parse(req.body);
     const updatedUser = await UserService.updateUser(userId, userData);
     if (updatedUser) {
       res.status(200).json(updatedUser);
@@ -170,7 +161,7 @@ export const deleteUser = async (
   res: Response
 ): Promise<void> => {
   try {
-    const userId = req.params.id;
+    const { id: userId } = ValidationSchemas.idParam.parse({ id: req.params.id });
     const deletedUser = await UserService.deleteUser(userId);
     if (deletedUser) {
       res.status(200).json({ message: "User deleted" });
@@ -187,7 +178,9 @@ export const searchUsers = async (
   res: Response
 ): Promise<void> => {
   try {
-    const search = req.query.search as string;
+    const { search } = ValidationSchemas.searchQuery.parse({
+      search: req.query.search,
+    });
 
     const users = await UserService.searchUsers(search);
 
