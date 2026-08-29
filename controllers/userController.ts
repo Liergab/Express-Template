@@ -95,9 +95,6 @@ export const getAllUsers = async (
       include: parseJsonParam(req.query.include),
       sort: parseJsonParam(req.query.sort) || req.query.sort,
       limit: req.query.limit,
-      select: Array.isArray(req.query.select)
-        ? req.query.select
-        : [req.query.select].filter(Boolean),
       page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
     });
 
@@ -120,13 +117,8 @@ export const getAllUsers = async (
 export const getUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = ValidationSchemas.idParam.parse({ id: req.params.id });
-    const params = ValidationSchemas.getQueryParams.parse({
-      select: Array.isArray(req.query.select)
-        ? req.query.select
-        : [req.query.select].filter(Boolean),
-    });
 
-    const user = await UserService.getUser(id, params);
+    const user = await UserService.getUser(id);
     res
       .status(200)
       .send({ message: "User retrieved successfully", data: user });

@@ -4,7 +4,6 @@ import logger from '../config/logger';
 // Prisma query parameters interface
 export interface PrismaDbParams {
   where?: any;
-  select?: any;
   include?: any;
   orderBy?: any;
   skip?: number;
@@ -39,7 +38,6 @@ export class GenericRepository<T> {
       const query: any = {};
 
       if (dbParams.where) query.where = dbParams.where;
-      if (dbParams.select) query.select = dbParams.select;
       if (dbParams.include) query.include = dbParams.include;
       if (dbParams.orderBy) query.orderBy = dbParams.orderBy;
       if (dbParams.skip !== undefined) query.skip = dbParams.skip;
@@ -139,7 +137,6 @@ export class GenericRepository<T> {
         where: { id },
       };
 
-      if (dbParams.select) query.select = dbParams.select;
       if (dbParams.include) query.include = dbParams.include;
 
       const result = await delegate.findUnique(query);

@@ -44,14 +44,9 @@ export const ValidationSchemas = {
       message: "At least one field is required for update",
     }),
 
-  getQueryParams: z.object({
-    select: z.union([z.string(), z.array(z.string())]).optional(),
-  }),
-
   getQueriesParams: z.object({
     filter: z.string().optional(),
     include: z.record(z.any()).optional(),
-    select: z.union([z.string(), z.array(z.string())]).optional(),
     sort: z.union([z.string(), z.record(z.any())]).optional(),
     queryArray: z
       .union([z.string(), z.number(), z.array(z.union([z.string(), z.number()]))])
@@ -78,6 +73,5 @@ export type IdParamType = z.infer<typeof ValidationSchemas.idParam>;
 export type CreateUserDTO = z.infer<typeof ValidationSchemas.createUser>;
 export type LoginDTO = z.infer<typeof ValidationSchemas.login>;
 export type UpdateUserDTO = z.infer<typeof ValidationSchemas.updateUser>;
-export type GetUserQueryDTO = z.infer<typeof ValidationSchemas.getQueryParams>;
 export type GetUsersQueryDTO = z.infer<typeof ValidationSchemas.getQueriesParams>;
 export type SearchUsersQueryDTO = z.infer<typeof ValidationSchemas.searchQuery>;

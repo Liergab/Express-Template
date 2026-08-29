@@ -5,7 +5,6 @@ import generateToken from "../util/generateToken";
 import parseFilterString from "../util/parseFilterString";
 import {
   CreateUserDTO,
-  GetUserQueryDTO,
   GetUsersQueryDTO,
   LoginDTO,
   UpdateUserDTO,
@@ -101,21 +100,6 @@ class UserService {
         dbParams.orderBy = params.sort;
       }
 
-      // Handle field selection (Prisma uses 'select')
-      // Note: select and include cannot be used together in Prisma
-      if (params.select && !dbParams.include) {
-        const selectFields = Array.isArray(params.select)
-          ? params.select.filter((f: string) => f && f.trim())
-          : [params.select].filter((f: string) => f && f.trim());
-
-        if (selectFields.length > 0) {
-          dbParams.select = {};
-          selectFields.forEach((field: string) => {
-            dbParams.select[field] = true;
-          });
-        }
-      }
-
       // Pagination
       const page = params.page || 1;
       const limit = params.limit || 10;
@@ -181,29 +165,13 @@ class UserService {
     }
   }
 
-  async getUser(id: string, params: GetUserQueryDTO): Promise<IUser | null> {
+  async getUser(id: string): Promise<IUser | null> {
     if (!id) {
       throw new Error("User ID is required");
     }
 
     try {
-      const dbParams: any = {};
-
-      // Handle field selection (Prisma uses 'select')
-      if (params.select) {
-        const selectFields = Array.isArray(params.select)
-          ? params.select.filter((f: string) => f && f.trim())
-          : [params.select].filter((f: string) => f && f.trim());
-
-        if (selectFields.length > 0) {
-          dbParams.select = {};
-          selectFields.forEach((field: string) => {
-            dbParams.select[field] = true;
-          });
-        }
-      }
-
-      return await UserRepository.doc(id, dbParams);
+      return await UserRepository.doc(id);
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(error.message);
